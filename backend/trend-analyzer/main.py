@@ -37,9 +37,10 @@ MAX_FILE_SIZE_MB = int(os.environ.get("MAX_FILE_SIZE_MB", "100"))
 
 ANALYSIS_PROMPT = """You are a social media content strategist writing briefs for clients who are not technical.
 
-Analyze this video and return a JSON object with the following structure.
+Analyze this video and return a JSON object with EXACTLY the structure below.
 Return ONLY valid JSON, no markdown fences, no preamble. Write in plain,
-conversational language that anyone can understand.
+conversational language that anyone can understand. Every field is REQUIRED
+unless explicitly marked optional.
 
 {
   "summary": "2-3 sentence plain-English summary of the video",
@@ -50,21 +51,22 @@ conversational language that anyone can understand.
   "why_it_works": ["2-4 plain-English reasons why this video performs well"],
   "how_to_recreate": ["Simple step-by-step instructions anyone could follow to make a similar video"],
   "what_you_need": "Equipment and setup needed, e.g. phone, tripod, good lighting",
-  "caption_tips": "How to write the caption and what kind of hashtags to use"
+  "caption_tips": "How to write the caption and what kind of hashtags to use",
+  "comment_analysis": {
+    "what_viewers_loved": ["2-3 specific things commenters reacted to most, quoting or paraphrasing patterns you see in the comments below"],
+    "audience_type": "One sentence describing who watches this content, inferred from the comments",
+    "ideas_from_comments": ["Any content ideas, requests, or follow-up videos viewers suggested in the comments"]
+  }
 }
+
+IMPORTANT rules for "comment_analysis":
+- If a COMMENTS section is provided below, you MUST fill in comment_analysis with real observations from those comments. Do not invent.
+- If NO comments are provided below, set "comment_analysis" to null (the literal JSON null, not omitted).
 """
 
-COMMENTS_ADDENDUM = """
+COMMENTS_SUFFIX = """
 
-TOP COMMENTS FROM THIS VIDEO:
-Use these to understand what viewers liked. Add this to your JSON:
-"comment_analysis": {{
-  "what_viewers_loved": ["2-3 things commenters reacted to most"],
-  "audience_type": "One sentence describing who watches this content",
-  "ideas_from_comments": ["Any content ideas or requests viewers suggested"]
-}}
-
-COMMENTS:
+TOP COMMENTS FROM THIS VIDEO (sorted by likes, highest first):
 {comments_text}
 """
 
@@ -153,11 +155,12 @@ def analyze_video(filepath: Path, client: genai.Client, comments: list[dict]) ->
             f"  - [{c['likes']} likes]{' [PINNED]' if c['is_pinned'] else ''} @{c['author']}: {c['text']}"
             for c in comments
         )
-        prompt += COMMENTS_ADDENDUM.format(comments_text=comments_text)
+        prompt += COMMENTS_SUFFIX.format(comments_text=comments_text)
 
     response = client.models.generate_content(
         model=GEMINI_MODEL,
         contents=[uploaded, prompt],
+        config={"response_mime_type": "application/json"},
     )
 
     raw_text = (response.text or "").strip()
