@@ -1,0 +1,31 @@
+# TODO: REPLACE "yourdomain.com" with the actual client domain
+
+User-agent: *
+Allow: /
+Sitemap: https://yourdomain.com/sitemap.xml
+
+# AI Search Bots - allowed for citation
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Block training-only crawlers
+User-agent: CCBot
+Disallow: /
